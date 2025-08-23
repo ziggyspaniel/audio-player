@@ -1,0 +1,18 @@
+<!doctype html>
+<html>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Player</title>
+  <body style="font-family:system-ui;margin:2rem;max-width:720px">
+    <h1>Your Audio</h1>
+    <audio id="player" controls preload="metadata" style="width:100%"></audio>
+    <p id="fallback" style="display:none;color:#900">No audio link provided.</p>
+    <script>
+      const q = new URLSearchParams(location.search);
+      const src = q.get("src");
+      const el = document.getElementById("player");
+      if (src) { el.src = src; }
+      else { document.getElementById("fallback").style.display = "block"; }
+    </script>
+  </body>
+</html>
