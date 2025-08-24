@@ -4,19 +4,19 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Audio</title>
 <style>
-  :root { --z: 1; }  /* base zoom */
+  :root { --z: 1; }
   html,body{margin:0;padding:0;background:transparent;font:14px/1.2 system-ui;overflow-x:hidden}
   .wrap{padding:6px 8px}
   .title{margin:0 0 6px;color:#111;font-weight:600;font-size:13px;display:none}
+  .fallback{display:none;color:#900;margin:6px 0 0}   /* <-- hide by default */
   audio{
     width:calc(100% / var(--z));
     transform:scale(var(--z));
     transform-origin:left center;
   }
-  /* mobile: narrower + taller */
   @media (max-width:480px){
-    .wrap{max-width:340px;margin:12px auto}  /* reduce width */
-    :root{ --z:1.2 }                         /* increase height (~20%) */
+    .wrap{max-width:340px;margin:12px auto}
+    :root{ --z:1.2 }
   }
 </style>
 
@@ -38,18 +38,24 @@
   }
 
   const audio = document.getElementById('player');
-  if (title) { document.getElementById('title').textContent = decodeURIComponent(title); document.getElementById('title').style.display='block'; }
+  const fb    = document.getElementById('fallback');
+
+  if (title) {
+    const t = document.getElementById('title');
+    t.textContent = decodeURIComponent(title);
+    t.style.display = 'block';
+  }
 
   // autoplay ON by default; pass ?autoplay=0 to disable
   const autoplay = (qs.get('autoplay') ?? '1') !== '0';
 
-  if (src) {
-    audio.src = src;
+  if (src && src.trim()) {
+    audio.src = src.trim();
+    fb.style.display = 'none';                // ensure hidden when src present
     if (autoplay) audio.play().catch(()=>{});
   } else {
-    document.getElementById('fallback').style.display = 'block';
+    fb.style.display = 'block';
   }
 </script>
-
 </body>
 </html>
