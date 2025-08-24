@@ -4,13 +4,20 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Audio</title>
 <style>
-  :root { --z: .90; }               /* default zoom: 0.90 (makes the control shorter) */
-  html,body{margin:0;padding:0;background:transparent;font:14px/1.2 system-ui}
+  :root { --z: 1; }  /* base zoom */
+  html,body{margin:0;padding:0;background:transparent;font:14px/1.2 system-ui;overflow-x:hidden}
   .wrap{padding:6px 8px}
   .title{margin:0 0 6px;color:#111;font-weight:600;font-size:13px;display:none}
-  audio{width:calc(100% / var(--z)); transform:scale(var(--z));
-        transform-origin:left center; height:32px; } /* height is ignored by some UAs; zoom does the work */
-  .fallback{display:none;color:#900;margin:6px 0 0}
+  audio{
+    width:calc(100% / var(--z));
+    transform:scale(var(--z));
+    transform-origin:left center;
+  }
+  /* mobile: narrower + taller */
+  @media (max-width:480px){
+    .wrap{max-width:340px;margin:12px auto}  /* reduce width */
+    :root{ --z:1.2 }                         /* increase height (~20%) */
+  }
 </style>
 
 <body>
@@ -21,37 +28,28 @@
   </div>
 
 <script>
-  // read query params
   const qs = new URLSearchParams(location.search);
-  const src   = qs.get('src');       // required
-  const title = qs.get('title');     // optional small title
-  const zoom  = parseFloat(qs.get('z') || '') || null; // e.g. z=0.8 to shrink more
+  const src   = qs.get('src');
+  const title = qs.get('title');
+  const zoom  = parseFloat(qs.get('z') || '') || null;
 
-  if (zoom && zoom > 0.5 && zoom <= 1) {
+  if (zoom && zoom > 0.6 && zoom <= 1.8) {
     document.documentElement.style.setProperty('--z', zoom);
   }
 
-  const audio  = document.getElementById('player');
-  const tEl    = document.getElementById('title');
-  const fb     = document.getElementById('fallback');
+  const audio = document.getElementById('player');
+  if (title) { document.getElementById('title').textContent = decodeURIComponent(title); document.getElementById('title').style.display='block'; }
 
-  if (title) { tEl.textContent = decodeURIComponent(title); tEl.style.display = 'block'; }
+  // autoplay ON by default; pass ?autoplay=0 to disable
+  const autoplay = (qs.get('autoplay') ?? '1') !== '0';
 
   if (src) {
     audio.src = src;
-    // optional autoplay if parent iframe allows it: ?autoplay=1
-    if (qs.get('autoplay') === '1') { audio.play().catch(()=>{}); }
+    if (autoplay) audio.play().catch(()=>{});
   } else {
-    fb.style.display = 'block';
+    document.getElementById('fallback').style.display = 'block';
   }
-
-  // Tell parent our height so its iframe can fit snugly (optional).
-  function postSize(){
-    const h = document.documentElement.scrollHeight;
-    parent && parent.postMessage({ type:'audioplayer:size', height:h }, '*');
-  }
-  window.addEventListener('load', postSize);
-  window.addEventListener('resize', postSize);
 </script>
+
 </body>
 </html>
