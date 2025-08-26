@@ -7,15 +7,15 @@
   :root { --z: 1; }
   html,body{margin:0;padding:0;background:transparent;font:14px/1.2 system-ui;overflow-x:hidden}
   .wrap{padding:6px 8px}
-  .title{margin:0 0 6px;color:#111;font-weight:600;font-size:13px;display:none}
-  .fallback{display:none;color:#900;margin:6px 0 0}   /* <-- hide by default */
+  .title{display:none;margin:0 0 6px;color:#111;font-weight:600;font-size:13px}
+  .fallback{display:none;color:#900;margin:6px 0 0}
   audio{
     width:calc(100% / var(--z));
     transform:scale(var(--z));
     transform-origin:left center;
   }
   @media (max-width:480px){
-    .wrap{max-width:340px;margin:12px auto}
+    .wrap{max-width:340px;margin:10px auto}
     :root{ --z:1.2 }
   }
 </style>
@@ -23,15 +23,17 @@
 <body>
   <div class="wrap">
     <div id="title" class="title"></div>
-    <audio id="player" preload="metadata" controls controlslist="nodownload"></audio>
+    <!-- playsinline helps iOS play inside the iframe -->
+    <audio id="player" preload="metadata" controls playsinline controlslist="nodownload"></audio>
     <div id="fallback" class="fallback">No audio link provided.</div>
   </div>
 
 <script>
-  const qs = new URLSearchParams(location.search);
+  const qs    = new URLSearchParams(location.search);
   const src   = qs.get('src');
   const title = qs.get('title');
-  const zoom  = parseFloat(qs.get('z') || '') || null;
+  const zoom  = parseFloat(qs.get('z')||'') || null;
+  const autoplay = (qs.get('autoplay') ?? '1') !== '0';   // default ON
 
   if (zoom && zoom > 0.6 && zoom <= 1.8) {
     document.documentElement.style.setProperty('--z', zoom);
@@ -40,22 +42,33 @@
   const audio = document.getElementById('player');
   const fb    = document.getElementById('fallback');
 
-  if (title) {
-    const t = document.getElementById('title');
-    t.textContent = decodeURIComponent(title);
-    t.style.display = 'block';
-  }
+  if (title) { const t = document.getElementById('title'); t.textContent = decodeURIComponent(title); t.style.display='block'; }
 
-  // autoplay ON by default; pass ?autoplay=0 to disable
-  const autoplay = (qs.get('autoplay') ?? '1') !== '0';
+  function sendSize(){
+    const h = document.documentElement.scrollHeight || document.body.scrollHeight || 80;
+    parent.postMessage(JSON.stringify({type:'audioplayer:size', h}), '*');
+  }
+  function ready(){
+    parent.postMessage(JSON.stringify({type:'audioplayer:ready'}), '*');
+    sendSize();
+  }
+  window.addEventListener('load', sendSize);
+  new ResizeObserver(sendSize).observe(document.body);
 
   if (src && src.trim()) {
     audio.src = src.trim();
-    fb.style.display = 'none';                // ensure hidden when src present
-    if (autoplay) audio.play().catch(()=>{});
+    if (autoplay) audio.setAttribute('autoplay','');
+    // try to start; ignore any NotAllowed errors (user can tap play)
+    const p = audio.play?.();
+    if (p && typeof p.catch==='function') p.catch(()=>{});
+    fb.style.display='none';
   } else {
-    fb.style.display = 'block';
+    fb.style.display='block';
   }
+
+  audio.addEventListener('loadedmetadata', sendSize);
+  audio.addEventListener('volumechange', sendSize);
+  ready();
 </script>
 </body>
 </html>
